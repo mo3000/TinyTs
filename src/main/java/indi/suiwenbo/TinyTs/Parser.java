@@ -1,19 +1,28 @@
 package indi.suiwenbo.TinyTs;
 
 import indi.suiwenbo.TinyTs.Ast.Node;
-import indi.suiwenbo.TinyTs.RawToken.RawIdent;
-import indi.suiwenbo.TinyTs.RawToken.RawNumber;
-import indi.suiwenbo.TinyTs.RawToken.RawToken;
-import indi.suiwenbo.TinyTs.RawToken.ReservedOp;
+import indi.suiwenbo.TinyTs.RawToken.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Parser {
 
     private int pos = 0;
     private String plainText;
     private List<RawToken> rawTokenList;
+
+    private Set<String> keyword;
+
+
+    public Parser() {
+        keyword = new HashSet<>();
+        for (var e : Keyword.values()) {
+            keyword.add(e.toString());
+        }
+    }
 
 
 
@@ -22,6 +31,7 @@ public class Parser {
         pos = 0;
         skipBlank();
         parseRawTokenList();
+        return buildAst();
     }
 
     private void parseRawTokenList() {
@@ -30,35 +40,24 @@ public class Parser {
             if (Character.isDigit(currentChar())) {
                 rawTokenList.add(rawNumber());
             } else if (Character.isJavaIdentifierStart(currentChar())) {
-                rawTokenList.add(rawIdText());
+                var text = rawPossibleIdent();
+                if (keyword.contains(text)) {
+                    rawTokenList.add(new ReservedWord(text));
+                } else {
+                    rawTokenList.add(new RawIdent(text));
+                }
             } else {
                 rawTokenList.add(switch (currentChar()) {
                     case '{', '}', '(', ')', '[', ']' -> {
                         pos++;
                         yield new ReservedOp("{");
                     }
-                    case '+', '-' -> {
-                        var cur = currentChar();
-                        if ((pos + 1 < plainText.length())
-                            && (plainText.charAt(pos + 1) == '='
-                                || plainText.charAt(pos + 1) == cur)) {
-                            int before = pos;
-                            pos += 2;
-                            yield new ReservedOp(plainText.substring(before, before + 2));
-                        } else {
-                            yield new ReservedOp(Character.toString(cur));
-                        }
-                    }
-                    case '/', '%', '*' -> {
-                        var cur = currentChar();
-                        if (pos + 1 < plainText.length() && plainText.charAt(pos + 1) == '=') {
-                            int before = pos;
-                            pos += 2;
-                            yield new ReservedOp(plainText.substring(before, before + 2));
-                        } else {
-                            yield new ReservedOp(Character.toString(cur));
-                        }
-                    }
+                    case '+' -> probeOp2('+', '=');
+                    case '-' -> probeOp2('-', '=');
+                    case '/', '%', '*', '!' -> probeOp2('=');
+                    case '=' -> probeOp2('>', '=');
+                    case '<' -> probeOp2('=', '<');
+                    case '>' -> probeOp2('=', '>');
                     default -> throw new RuntimeException("error " + currentChar());
                 });
             }
@@ -80,6 +79,31 @@ public class Parser {
         return pos >= plainText.length();
     }
 
+    private boolean nextCharEq(char... chars) {
+        if (pos + 1 < plainText.length()) {
+            char next = plainText.charAt(pos + 1);
+            for (char c : chars) {
+                if (c == next) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private RawToken probeOp2(char... chars) {
+        var cur = currentChar();
+        if (nextCharEq(chars)) {
+            int before = pos;
+            pos += 2;
+            return new ReservedOp(plainText.substring(before, before + 2));
+        } else {
+            pos++;
+            return new ReservedOp(Character.toString(cur));
+        }
+    }
+
+
     private RawNumber rawNumber() {
         int before = pos;
         while (notEof() && (Character.isDigit(currentChar()) || currentChar() == '.')) {
@@ -89,15 +113,19 @@ public class Parser {
     }
 
 
-    private RawIdent rawIdText() {
+    private String rawPossibleIdent() {
         int before = pos;
         pos++;
         while (notEof() && Character.isJavaIdentifierPart(currentChar())) {
             pos++;
         }
-        return new RawIdent(plainText.substring(before, pos));
+        return plainText.substring(before, pos);
     }
 
+    private Node buildAst() {
+        pos = 0;
+        while (pos < rawTokenList.size()) {
 
-
+        }
+    }
 }
