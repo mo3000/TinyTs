@@ -2,7 +2,8 @@ package indi.suiwenbo.TinyTs.RawToken;
 
 public enum Keyword {
     CLASS("class"), STATIC("static"), IMPORT("import"),
-    EXPORT("export"), FUNCTION("function"),
+    EXPORT("export"), FUNCTION("function"), LET("let"),
+    CONST("const"),
     ;
 
     private final String name;

@@ -1,6 +1,8 @@
 package indi.suiwenbo.TinyTs;
 
+import indi.suiwenbo.TinyTs.Ast.Block;
 import indi.suiwenbo.TinyTs.Ast.Node;
+import indi.suiwenbo.TinyTs.Ast.Statement;
 import indi.suiwenbo.TinyTs.RawToken.*;
 
 import java.util.ArrayList;
@@ -14,7 +16,9 @@ public class Parser {
     private String plainText;
     private List<RawToken> rawTokenList;
 
-    private Set<String> keyword;
+    private final Set<String> keyword;
+
+    private List<Node> ast;
 
 
     public Parser() {
@@ -26,12 +30,12 @@ public class Parser {
 
 
 
-    public Node parse(String text) {
+    public void parse(String text) {
         plainText = text;
         pos = 0;
         skipBlank();
         parseRawTokenList();
-        return buildAst();
+        buildAst();
     }
 
     private void parseRawTokenList() {
@@ -52,6 +56,7 @@ public class Parser {
                         pos++;
                         yield new ReservedOp("{");
                     }
+                    case ';' -> new ReservedOp(";");
                     case '+' -> probeOp2('+', '=');
                     case '-' -> probeOp2('-', '=');
                     case '/', '%', '*', '!' -> probeOp2('=');
@@ -91,14 +96,14 @@ public class Parser {
         return false;
     }
 
-    private RawToken probeOp2(char... chars) {
+    private ReservedOp probeOp2(char... chars) {
         var cur = currentChar();
         if (nextCharEq(chars)) {
             int before = pos;
             pos += 2;
             return new ReservedOp(plainText.substring(before, before + 2));
         } else {
-            pos++;
+            advance();
             return new ReservedOp(Character.toString(cur));
         }
     }
@@ -115,17 +120,77 @@ public class Parser {
 
     private String rawPossibleIdent() {
         int before = pos;
-        pos++;
+        advance();
         while (notEof() && Character.isJavaIdentifierPart(currentChar())) {
-            pos++;
+            advance();
         }
         return plainText.substring(before, pos);
     }
 
-    private Node buildAst() {
-        pos = 0;
-        while (pos < rawTokenList.size()) {
+    private void advance() {
+        pos++;
+    }
 
+    private void buildAst() {
+        pos = 0;
+        ast = new ArrayList<>();
+        while (pos < rawTokenList.size()) {
+            block();
+            advance();
         }
+    }
+
+
+    private RawToken currentToken() {
+        return rawTokenList.get(pos);
+    }
+
+
+
+    private Block block() {
+        boolean hasBlockStart = tokenEquals("{");
+        if (hasBlockStart) {
+            advance();
+        }
+        var blk = blockBody(!hasBlockStart);
+        if (hasBlockStart) {
+            assert(tokenEquals("}"));
+            advance();
+        }
+        return blk;
+    }
+
+    private Block blockBody(boolean oneSentenceBody) {
+        var blk = new Block();
+        if (oneSentenceBody) {
+            blk.addStmt(statement());
+            advance();
+        } else {
+            while (!tokenEquals("}")) {
+                blk.addStmt(statement());
+            }
+        }
+        return blk;
+    }
+
+
+    private boolean tokenEquals(RawToken obj1, RawToken obj2) {
+        return obj1.name().equals(obj2.name());
+    }
+
+    private boolean tokenEquals(RawToken obj1, String obj2) {
+        return obj1.name().equals(obj2);
+    }
+
+    private boolean tokenEquals(String obj2) {
+        return currentToken().name().equals(obj2);
+    }
+
+    private Statement statement() {
+
+    }
+
+    private void expr() {
+
     }
 }

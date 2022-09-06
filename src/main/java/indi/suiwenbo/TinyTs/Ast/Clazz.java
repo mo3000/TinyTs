@@ -1,6 +1,6 @@
 package indi.suiwenbo.TinyTs.Ast;
 
-public class Clazz extends Node {
+public class Clazz implements Node {
 
     private String name;
 

@@ -1,4 +1,4 @@
 package indi.suiwenbo.TinyTs.Ast;
 
-public class Node {
+public interface Node {
 }
