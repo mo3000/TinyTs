@@ -187,6 +187,21 @@ public class Parser {
     }
 
     private Statement statement() {
+        if (tokenEquals("const") || tokenEquals("let")) {
+            advance();
+            var decl = varDecl(tokenEquals("const"));
+            if (eol()) {
+                return decl;
+            }
+
+        }
+    }
+
+    private boolean eol() {
+        return tokenEquals(";");
+    }
+
+    private Statement varDecl(boolean isConst) {
 
     }
 
